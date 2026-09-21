@@ -1,0 +1,24 @@
+{
+  "files.associations": {
+    "cstdint": "cpp",
+    "freertos.h": "c",
+    "customservo.h": "c",
+    "movements.h": "c",
+    "gpio.h": "c",
+    "globals.h": "c"
+  },
+  "[c]": {
+    "editor.tabSize": 4,
+    "editor.insertSpaces": true,
+    "editor.detectIndentation": false
+  },
+  "clangd.path": "C:\\Users\\pato121314\\.espressif\\tools\\esp-clang\\15.0.0-23786128ae\\esp-clang\\bin\\clangd.exe",
+  "clangd.arguments": [
+    "--background-index",
+    "--query-driver=C:\\Users\\pato121314\\.espressif\\tools\\xtensa-esp32s3-elf\\esp-12.2.0_20230208\\xtensa-esp32s3-elf\\bin\\xtensa-esp32s3-elf-gcc.exe",
+    "--compile-commands-dir=c:\\Users\\pato121314\\Documents\\Cima3D-Project\\Protesis_ESP_ESP-IDF_ML\\build"
+  ],
+  "idf.flashType": "UART",
+  "idf.portWin": "COM4",
+  "idf.currentSetup": "c:\\Espressif\\frameworks\\esp-idf-v5.1.6"
+}

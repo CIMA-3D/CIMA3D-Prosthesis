@@ -1,0 +1,152 @@
+#pragma once
+
+#include "nn_model.h"
+#include "tensorflow/lite/micro/system_setup.h"
+#include "tensorflow/lite/schema/schema_generated.h"
+#include "tensorflow/lite/micro/micro_interpreter.h"
+#include "tensorflow/lite/micro/micro_mutable_op_resolver.h"
+
+// In order to use optimized tensorflow lite kernels, a signed int8_t quantized
+// model is preferred over the legacy unsigned model format.
+
+// pio run -t menuconfig
+#if CONFIG_NN_OPTIMIZED
+constexpr int scratchBufSize = 15 * 1024;
+#else
+constexpr int scratchBufSize = 0;
+#endif
+
+#if ESP_NN
+int espNN = 1;
+#else
+int espNN = 0;
+#endif
+
+// An area of memory to use for input, output, and intermediate arrays.
+// constexpr int kTensorArenaSize = 8 * 1024 + scratchBufSize;
+
+class NN {
+public:
+    static constexpr int kTensorArenaSize = 45 * 1024 + scratchBufSize; // adjust if needed
+
+    NN(const unsigned char* _modeldata)
+        : _model(tflite::GetModel(_modeldata))
+        // , _tensorArena(nullptr)
+        {
+
+        if (!_model || _model->version() != TFLITE_SCHEMA_VERSION) {
+            printf("Model provided is schema version %lu not equal to supported version %d.", _model->version(), TFLITE_SCHEMA_VERSION);
+            return;
+        }
+
+        // _tensorArena = (uint8_t*) heap_caps_malloc(kTensorArenaSize, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+        // if (!_tensorArena) {
+        //     printf("Failed to allocate tensor arena\n");
+        //     return;
+        // }
+
+        static tflite::MicroMutableOpResolver<11> resolver;
+        resolver.AddFullyConnected();
+        resolver.AddRelu();
+        resolver.AddSoftmax();
+        resolver.AddReshape();
+        resolver.AddShape();
+        resolver.AddPack();
+        resolver.AddStridedSlice();
+        // resolver.AddQuantize();
+        // resolver.AddDequantize();
+
+        // resolver.AddReshape();
+        // resolver.AddExpandDims();
+        // resolver.AddConv2D();
+        // resolver.AddMean();
+        // resolver.AddFullyConnected();
+        // resolver.AddRelu();
+        // resolver.AddSoftmax();
+        // resolver.AddQuantize();
+        // resolver.AddDequantize();
+
+        static tflite::MicroInterpreter static_interpreter(_model, resolver, _tensorArena, kTensorArenaSize);
+        _interpreter = &static_interpreter;
+
+        if (_interpreter->AllocateTensors() != kTfLiteOk) {
+            printf("AllocateTensors() failed\n");
+            return;
+        }
+
+        _input = _interpreter->input(0);
+        _output = _interpreter->output(0);
+
+        for (int i = 0; i < nn_num_features; i++) {
+            _inputScaler.multiplier[i] = 1.0 / (nn_scaler_std[i] * _input->params.scale);
+            _inputScaler.offset[i] = _input->params.zero_point - nn_scaler_mean[i] / (_input->params.scale * nn_scaler_std[i]);
+            // _inputScaler.multiplier[i] = 1.0 / (nn_scaler_std[i]);
+            // _inputScaler.offset[i] = - nn_scaler_mean[i] / (nn_scaler_std[i]);
+        }
+        if (nn_one_hot_size) {
+            for (int i = 0; i < nn_one_hot_size; i++) {
+                _inputScaler.multiplier[nn_num_features+i] = 1.0 / (_input->params.scale);
+                _inputScaler.offset[nn_num_features+i] = _input->params.zero_point;
+            }
+        }
+
+        printf("NN initialized. With esp_nn: %d\n", espNN);
+    }
+
+
+
+    int run(float **inputData) {
+
+        // fused scaling + quantization
+        int index = 0;
+        for (int i = 0; i < nn_history_length; i++) {
+            for (int j = 0; j < nn_num_features+nn_one_hot_size; j++) {
+                float q = inputData[i][j] * _inputScaler.multiplier[j] + _inputScaler.offset[j];
+                q = std::clamp(std::round(q), -128.0f, 127.0f);
+                _input->data.int8[index++] = static_cast<int8_t>(q);
+            }
+            // _input->data.f[i] = q;
+        }
+
+        // Run inference
+        // taskYIELD();
+        // unsigned long t_start = esp_timer_get_time();
+        if (_interpreter->Invoke() != kTfLiteOk) {
+            printf("Inference failed\n");
+            return -1;
+        }
+        // printf(">nnT: %llu us\n", esp_timer_get_time() - t_start);
+
+        // Copy and dequantize output
+        for (int i = 0; i < nn_output_size[0]; i++) {
+            _outputVector[i] = (static_cast<float>(_output->data.int8[i]) - _output->params.zero_point) * _output->params.scale;
+            // _outputVector[i] = _output->data.int8[i];
+        }
+        // printf("I bytes: %d\n", _input->bytes);
+
+        // Compute argmax to get the predicted label
+        int pred = std::distance(_outputVector, std::max_element(_outputVector, _outputVector + nn_output_size[0]));
+        return pred;
+    }
+
+
+    float* getOutput() { return _outputVector; }
+
+
+
+private:
+    const tflite::Model* _model;
+    inline static tflite::MicroInterpreter* _interpreter;
+    TfLiteTensor* _input;
+    TfLiteTensor* _output;
+    // uint8_t* _tensorArena;//[kTensorArenaSize]; // Maybe we should move this to external
+    inline static uint8_t _tensorArena[kTensorArenaSize];
+
+    struct InputScaler {
+        float multiplier[nn_num_features+nn_one_hot_size];
+        float offset[nn_num_features+nn_one_hot_size];
+    };
+    InputScaler _inputScaler;
+
+    float _outputVector[nn_output_size[0]] = {};
+};

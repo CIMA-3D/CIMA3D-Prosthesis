@@ -1,0 +1,39 @@
+# ================================
+# CODEOWNERS – CIMA3D-Prosthesis
+# ================================
+
+# ----------------
+# DOCUMENTACIÓN
+# ----------------
+
+/docs/decisiones/        @CIMA3D/junta
+/docs/informes/          @CIMA3D/junta @CIMA3D/mantenimiento
+/docs/manuales/          @CIMA3D/mantenimiento
+/docs/pruebas/           @CIMA3D/mantenimiento
+
+# Documentación general
+/docs/                   @CIMA3D/junta @CIMA3D/mantenimiento
+
+# ----------------
+# MECÁNICA / HARDWARE
+# ----------------
+
+/hardware/               @CIMA3D/mecanica
+
+# ----------------
+# ELECTRÓNICA
+# ----------------
+
+/electronics/            @CIMA3D/electronica
+
+# ----------------
+# FIRMWARE
+# ----------------
+
+/firmware/               @CIMA3D/coders
+
+# ----------------
+# MACHINE LEARNING
+# ----------------
+
+/ml/                     @CIMA3D/coders

@@ -1,0 +1,11 @@
+idf_component_register(
+    SRCS
+        "SmartLeds.cpp"
+        "Color.cpp"
+        "RmtDriver4.cpp"
+        "RmtDriver5.cpp"
+    INCLUDE_DIRS
+        "include"
+    REQUIRES
+        driver
+)

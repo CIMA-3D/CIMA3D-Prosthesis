@@ -1,9 +1,0 @@
-idf_component_register(
-    SRCS
-        "NonBlockingTimer.cpp"
-    INCLUDE_DIRS
-        "include"
-    REQUIRES
-        esp_timer
-        freertos
-)

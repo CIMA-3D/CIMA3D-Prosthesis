@@ -16,6 +16,15 @@ Este repositorio integra:
 - Machine Learning / → Modelos y datasets
     - archivos .tflite
 
+# Firmware
+
+Código embebido de la prótesis.
+
+Plataforma principal:
+- ESP32
+
+Incluye control de motores, adquisición EMG y lógica de control.
+
 ## Documentacion 
 La mayor parte de documentacion del este proyecto esta en otro repositorio **[Documentacion general](https://github.com/CIMA-3D/Documentacion_general.git)**
 
